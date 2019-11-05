@@ -8,11 +8,11 @@
 
 //Add any important includes here which you may need
 
+// Size of page
 #define PGSIZE 4096
-
-// Maximum size of your memory
+// Maximum size of your virtual memory
 #define MAX_MEMSIZE 4*1024*1024*1024
-
+//Size of Physical Memory
 #define MEMSIZE 1024*1024*1024
 
 // Represents a page table entry
