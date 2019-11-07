@@ -5,7 +5,7 @@ char* virtualmap;
 char* physicalmap;
 int tablecount;	//counts tables created
 int pagecount;	//counts pages allocated
-unsigned int*pagedir;
+pde_t* pagedir;
 
 /*
 Function responsible for allocating and setting your physical memory 
@@ -15,15 +15,17 @@ void SetPhysicalMem() {
 	
     //Allocate physical memory using mmap or malloc; this is the total size of
     //your memory you are simulating
-
     //HINT: Also calculate the number of physical and virtual pages and allocate
-    //virtual and physical bitmaps and initialize them
-    //virtualmem is 2^20 (2^17 bytes)
-    //physical mem is 2^18 (2^15 bytes)
+    //virtual and physical bitmaps are  initialized and zero'd
+    //virtual mem is 2^20 bits (2^17 bytes)
+    //physical mem is 2^18 bits (2^15 bytes)
 	virtualmap=(char*) malloc(MAX_MEMSIZE/(PGSIZE*8)*sizeof(char));
+	memset(virtualmap, '\0', MAX_MEMSIZE/((PGSIZE));
 	physicalmap=(char*) malloc(MEMSIZE/(PGSIZE*8)*sizeof(char));
+	memset(physicalmap, '\0', MEMSIZE/((PGSIZE));
     //initializes directory
 	pagedir=(int*)malloc(sizeof(int)*1024);
+	memset(pagedir, 0, 1024);
     //creates pagetable for directory
 	int *pagetable=(int*)malloc(sizeof(int)*1024);
     //sets first entry of dir to table
@@ -80,11 +82,20 @@ void *get_next_avail(int num_pages) {
 and used by the benchmark
 */
 void *m_alloc(unsigned int num_bytes) {
-    //HINT: If the physical memory is not yet initialized, then allocate and initialize.
+    // If the physical memory is not yet initialized, then allocate and initialize.
 	if(flag==0){
 	//set physical space
 	SetPhysicalMem();
 	}
+    //checks how many pages are needed (bytes/pgsize+1
+	int pages;
+	if(num_bytes%(PGSIZE/8)!=0){
+	pages=num_bytes/(PGSIZE/8);
+	}
+	else{
+	pages=(num_bytes/(PGSIZE/8))+1;
+	}
+	
    /* HINT: If the page directory is not initialized, then initialize the
    page directory. Next, using get_next_avail(), check if there are free pages. If
    free pages are available, set the bitmaps and map a new page. Note, you will 
