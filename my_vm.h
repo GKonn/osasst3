@@ -2,7 +2,7 @@
 #define MY_VM_H_INCLUDED
 #include <stdbool.h>
 #include <stdlib.h>
-
+#include <strings.h>
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
 
@@ -11,10 +11,13 @@
 // Size of page
 #define PGSIZE 4096
 // Maximum size of your virtual memory
-#define MAX_MEMSIZE 4*1024*1024*1024
+#define MAX_MEMSIZE 4ULL*1024*1024*1024
 //Size of Physical Memory
 #define MEMSIZE 1024*1024*1024
-
+//Mask for Directory
+#define DIRMASK 0xFF100000
+//Mask for Table
+#define TABLEMASK 0x00EFF000
 // Represents a page table entry
 typedef unsigned long pte_t;
 

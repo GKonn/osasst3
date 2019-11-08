@@ -20,14 +20,14 @@ void SetPhysicalMem() {
     //virtual mem is 2^20 bits (2^17 bytes)
     //physical mem is 2^18 bits (2^15 bytes)
 	virtualmap=(char*) malloc(MAX_MEMSIZE/(PGSIZE*8)*sizeof(char));
-	memset(virtualmap, '\0', MAX_MEMSIZE/((PGSIZE));
+	bzero(virtualmap,MAX_MEMSIZE/(PGSIZE));
 	physicalmap=(char*) malloc(MEMSIZE/(PGSIZE*8)*sizeof(char));
-	memset(physicalmap, '\0', MEMSIZE/((PGSIZE));
+	bzero(physicalmap, MEMSIZE/(PGSIZE));
     //initializes directory
-	pagedir=(int*)malloc(sizeof(int)*1024);
-	memset(pagedir, 0, 1024);
+	pagedir=(pde_t*)malloc(sizeof(pde_t)*1024);
+	bzero(pagedir,1024);
     //creates pagetable for directory
-	int *pagetable=(int*)malloc(sizeof(int)*1024);
+	pte_t *pagetable=(pte_t*)malloc(sizeof(pte_t)*1024);
     //sets first entry of dir to table
 	pagedir[0]=&pagetable;
     //sets first entry of table to memory location
@@ -42,6 +42,7 @@ The function takes a virtual address and page directories starting address and
 performs translation to return the physical address
 */
 pte_t * Translate(pde_t *pgdir, void *va) {
+	
     //HINT: Get the Page directory index (1st level) Then get the
     //2nd-level-page table index using the virtual address.  Using the page
     //directory index and page table index get the physical address
@@ -75,8 +76,39 @@ PageMap(pde_t *pgdir, void *va, void *pa)
 void *get_next_avail(int num_pages) {
  
     //Use virtual address bitmap to find the next free page
+   /*Enact in loop
+    * 1. Traverse virtual bitmap
+    * 2. Locate null/free position 
+    * 3. link virtual to physical
+    
+    */
+	int temp;
+	int group=((num_pages+1)<<1)-1;
+	for(int i=0;i<MEMSIZE/PGSIZE;i++){
+		temp=i>>virtualmap;
+		if(temp&group==group){
+		temp=4<<temp;
+			for(int j=num_pages;j<num_pages;j++){
+				if(PageMap(pagedir,virtualmap,physicalmap)==-1){
+				
+				}
+			}
+		return (void*)temp;
+		}
+	} 
 }
-
+void *next_physical(){
+	int temp;
+	for(int i=0;i<MEMSIZE/PGSIZE;i+=PGSIZE){
+		temp=i>>physicalmap;
+		if(temp%2==0){//free block
+		//return addr of physical
+		physicalmap+=i<<1;
+		return (void*) &physicalspace+i*PGSIZE;
+		}
+	}
+	return 0;
+}
 
 /* Function responsible for allocating pages
 and used by the benchmark
@@ -86,6 +118,7 @@ void *m_alloc(unsigned int num_bytes) {
 	if(flag==0){
 	//set physical space
 	SetPhysicalMem();
+	flag=1;
 	}
     //checks how many pages are needed (bytes/pgsize+1
 	int pages;
@@ -95,6 +128,7 @@ void *m_alloc(unsigned int num_bytes) {
 	else{
 	pages=(num_bytes/(PGSIZE/8))+1;
 	}
+	return getnextavail(pages);
 	
    /* HINT: If the page directory is not initialized, then initialize the
    page directory. Next, using get_next_avail(), check if there are free pages. If
@@ -107,10 +141,11 @@ void *m_alloc(unsigned int num_bytes) {
 /* Responsible for releasing one or more memory pages using virtual address (va)
 */
 void a_free(void *va, int size) {
-
+	
     //Free the page table entries starting from this virtual address (va)
     // Also mark the pages free in the bitmap
     //Only free if the memory from "va" to va+size is valid
+	
 }
 
 
