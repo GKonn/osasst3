@@ -19,10 +19,10 @@ void SetPhysicalMem() {
     //virtual and physical bitmaps are  initialized and zero'd
     //virtual mem is 2^20 bits (2^17 bytes)
     //physical mem is 2^18 bits (2^15 bytes)
-	virtualmap=(char*) malloc(MAX_MEMSIZE/(PGSIZE*8)*sizeof(char));
-	bzero(virtualmap,MAX_MEMSIZE/(PGSIZE));
-	physicalmap=(char*) malloc(MEMSIZE/(PGSIZE*8)*sizeof(char));
-	bzero(physicalmap, MEMSIZE/(PGSIZE));
+	virtualmap=(char*) malloc(32768);
+	bzero(virtualmap,32768);
+	physicalmap=(char*) malloc(32786);
+	bzero(physicalmap, 32768);
     //initializes directory
 	pagedir=(pde_t*)malloc(sizeof(pde_t)*1024);
 	bzero(pagedir,1024);
