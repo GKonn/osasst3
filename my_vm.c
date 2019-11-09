@@ -88,7 +88,7 @@ void *get_next_avail(int num_pages) {
     * 3. link virtual to physical
     
     */
-	int temp,i,j;
+	int temp,i,j; //i is for iterating through the amount of pages and j is for allocating the number of pages
 	int group=((num_pages+1)<<1)-1;
 	for(i=0;i<MEMSIZE/PGSIZE;i++){//bit by bit of vmap
 		temp=virtualmap[i/8];//set to current section of bitmap
