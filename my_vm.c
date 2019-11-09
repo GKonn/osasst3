@@ -1,8 +1,8 @@
 #include "my_vm.h"
 int flag=0;
 char *physicalmem;
-char* virtualmap;
-char* physicalmap;
+char* virtualmap=NULL;
+char* physicalmap=NULL;
 int tablecount;	//counts tables created
 int pagecount;	//counts pages allocated
 pde_t* pagedir;
@@ -82,15 +82,15 @@ void *get_next_avail(int num_pages) {
     * 3. link virtual to physical
     
     */
-	int temp;
+	int temp,i,j;
 	int group=((num_pages+1)<<1)-1;
-	for(int i=0;i<MEMSIZE/PGSIZE;i++){
-		temp=i>>virtualmap;
-		if(temp&group==group){
-		temp=4<<temp;
-			for(int j=num_pages;j<num_pages;j++){
+	for(i=0;i<MEMSIZE/PGSIZE;i++){//bit by bit of vmap
+		temp=virtualmap[i/8];//set to current section of bitmap
+		if(!(temp&group)){//see if pages are free
+		temp=4<<temp;//set temp to vaddr
+			for(j=num_pages;j<num_pages;j++){
 				if(PageMap(pagedir,virtualmap,physicalmap)==-1){
-				
+				return NULL;	
 				}
 			}
 		return (void*)temp;
@@ -98,13 +98,13 @@ void *get_next_avail(int num_pages) {
 	} 
 }
 void *next_physical(){
-	int temp;
-	for(int i=0;i<MEMSIZE/PGSIZE;i+=PGSIZE){
-		temp=i>>physicalmap;
-		if(temp%2==0){//free block
+	int temp,i;
+	for(i=0;i<MEMSIZE/PGSIZE;i+=PGSIZE){
+		temp=physicalmap[i];
+                if(!(temp&((i%4)<<1))){//freeblock
 		//return addr of physical
 		physicalmap+=i<<1;
-		return (void*) &physicalspace+i*PGSIZE;
+		return (void*) &physicalmem+i*PGSIZE;
 		}
 	}
 	return 0;
