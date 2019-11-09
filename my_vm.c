@@ -41,7 +41,7 @@ void SetPhysicalMem() {
 The function takes a virtual address and page directories starting address and
 performs translation to return the physical address
 */
-pte_t * Translate(pde_t *pgdir, void *va) {
+void* Translate(pde_t *pgdir, void *va) {
 	
     //HINT: Get the Page directory index (1st level) Then get the
     //2nd-level-page table index using the virtual address.  Using the page
@@ -145,7 +145,7 @@ void a_free(void *va, int size) {
     //Free the page table entries starting from this virtual address (va)
     // Also mark the pages free in the bitmap
     //Only free if the memory from "va" to va+size is valid
-	
+
 }
 
 
@@ -158,7 +158,31 @@ void PutVal(void *va, void *val, int size) {
        the contents of "val" to a physical page. NOTE: The "size" value can be larger
        than one page. Therefore, you may have to find multiple pages using Translate()
        function.*/
-
+	int pages,i,f;
+	if(size%PGSIZE==0){
+	pages=size/PGSIZE;
+	f=1;
+	}//divides evenly
+	else{
+	pages=(size/PGSIZE)+1;i
+	}
+	void* phys;
+	//copy over byte by byte for each page
+	for(i=0;i<pages;i++){
+	phys=Translate(pagedir,va+PGSIZE);//set to physical mem addr
+		if(f==1){
+		memcpy(phys+(i*PGSIZE), val+(i*PGSIZE), PGSIZE);
+		}
+		else{
+			if(size>PGSIZE){
+			memcpy(phys+(i*PGSIZE), val+(i*PGSIZE), PGSIZE);
+			size-=PGSIZE;
+			}
+			else{
+			memcpy(phys+(i*PGSIZE), val+(i*PGSIZE), size);
+			}
+		}
+	}
 }
 
 
