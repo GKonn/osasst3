@@ -10,6 +10,12 @@ pde_t* pagedir;
 /*
 Function responsible for allocating and setting your physical memory 
 */
+int get_bitmap(bitmap_t map, int i){
+return map[i/8]&(1<<(i/8));
+}
+void set_bitmap(bitmap_t map, int i, int bit){
+map[i/8]=bit<<(i%8);
+}
 void SetPhysicalMem() {
 	physicalmem=(char*)malloc(MEMSIZE*sizeof(char));
 	
@@ -19,10 +25,10 @@ void SetPhysicalMem() {
     //virtual and physical bitmaps are  initialized and zero'd
     //virtual mem is 2^20 bits (2^17 bytes)
     //physical mem is 2^18 bits (2^15 bytes)
-	virtualmap=(char*) malloc(32768);
-	bzero(virtualmap,32768);
-	physicalmap=(char*) malloc(32786);
-	bzero(physicalmap, 32768);
+	virtualmap=(char*) malloc((MEM_SIZE/PGSIZE)/8);
+	bzero(virtualmap,(MEM_SIZE/PGSIZE)/8);
+	physicalmap=(char*) malloc((MEM_SIZE/PGSIZE)/8);
+	bzero(physicalmap, (MEM_SIZE/PGSIZE)/8);
     //initializes directory
 	pagedir=(pde_t*)malloc(sizeof(pde_t)*1024);
 	bzero(pagedir,1024);
@@ -101,9 +107,8 @@ void *next_physical(){
 	int temp,i;
 	for(i=0;i<MEMSIZE/PGSIZE;i+=PGSIZE){
 		temp=physicalmap[i];
-                if(!(temp&((i%4)<<1))){//freeblock
+                if(getbitmap(physicalmap,i)==0){//freeblock
 		//return addr of physical
-		physicalmap+=i<<1;
 		return (void*) &physicalmem+i*PGSIZE;
 		}
 	}
