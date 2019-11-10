@@ -1,61 +1,55 @@
 #include "my_vm.h"
-int flag=0;
-char *physicalmem;
-char* virtualmap=NULL;
-char* physicalmap=NULL;
-int tablecount;	//counts tables created
-int pagecount;	//counts pages allocated
-pde_t* pagedir;
 
-/*
-Function responsible for allocating and setting your physical memory 
-*/
-int get_bitmap(bitmap_t map, int i){
-return map[i/8]&(1<<(i/8));
-}
-void set_bitmap(bitmap_t map, int i, int bit){
-map[i/8]=bit<<(i%8);
-}
-void SetPhysicalMem() {
-	physicalmem=(char*)malloc(MEMSIZE*sizeof(char));
+/* Globals */
+int flag = 0;
+pde_t *pagedir;
+char* physicalmap;
+
+void SetPhysicalMem() {	
+	char *physicalmem = malloc(MEMSIZE);
+	physicalmap = malloc(PAGENUM);
+	char *virtualmap = malloc(PAGENUM);
+	//Zero out the bitmaps
+	bzero(physicalmap, BITMAPSIZE);
+	bzero(virtualmap, BITMAPSIZE);
+	// Creates the page directory and zeroes it out
+	pagedir = malloc(sizeof(pde_t) * 1024);
+	bzero(pagedir, 1024 * sizeof(pde_t));	
 	
-    //Allocate physical memory using mmap or malloc; this is the total size of
-    //your memory you are simulating
-    //HINT: Also calculate the number of physical and virtual pages and allocate
-    //virtual and physical bitmaps are  initialized and zero'd
-    //virtual mem is 2^20 bits (2^17 bytes)
-    //physical mem is 2^18 bits (2^15 bytes)
-	virtualmap=(char*) malloc((MEM_SIZE/PGSIZE)/8);
-	bzero(virtualmap,(MEM_SIZE/PGSIZE)/8);
-	physicalmap=(char*) malloc((MEM_SIZE/PGSIZE)/8);
-	bzero(physicalmap, (MEM_SIZE/PGSIZE)/8);
-    //initializes directory
-	pagedir=(pde_t*)malloc(sizeof(pde_t)*1024);
-	bzero(pagedir,1024);
-    //creates pagetable for directory
-	pte_t *pagetable=(pte_t*)malloc(sizeof(pte_t)*1024);
-    //sets first entry of dir to table
-	pagedir[0]=&pagetable;
-    //sets first entry of table to memory location
-	pagetable[0]=&physicalmem;
-	return;
 }
-
-
 
 /*
 The function takes a virtual address and page directories starting address and
 performs translation to return the physical address
 */
-void* Translate(pde_t *pgdir, void *va) {
-	
+pte_t * translate(pde_t *pgdir, void *va) {
     //HINT: Get the Page directory index (1st level) Then get the
     //2nd-level-page table index using the virtual address.  Using the page
     //directory index and page table index get the physical address
-
-
-    //If translation not successfull
-    return NULL; 
+	int offset = 12;
+	int secondoffset = 10;
+	long mask = (1 << offset) - 1;
+	long mask2 = (1 << secondoffset) - 1;
+	pde_t virtual = (pde_t) va, 
+	firstbits = (virtual >> (secondoffset + offset)) & mask,
+	secondbits = (virtual >> offset) & mask,
+	offset_t = virtual & mask2;
+	pde_t *new = (pde_t *) pgdir[firstbits];
+	if(!new){
+		return NULL;
+	}
+	pte_t entry = new[secondbits];
+	if(!entry){
+		return NULL;
+	}
+	pte_t finaladdress = entry + offset_t;
+	return (pte_t *) finaladdress;
+	
+/*	
+	void *x = pagedir[offset >> va];//sets x to appropriate page table
+	if(x==NULL){ return NULL;}
+	return x[(12>>va)&0x3FF];	//returns address value at position in mem
+*/
 }
 
 
@@ -65,76 +59,97 @@ as an argument, and sets a page table entry. This function will walk the page
 directory to see if there is an existing mapping for a virtual address. If the
 virtual address is not present, then a new entry will be added
 */
-int
-PageMap(pde_t *pgdir, void *va, void *pa)
-{
+int PageMap(pde_t *pgdir, void *va, void *pa) {//note: needs to allocate page tables as necessary
+	int offset  = 12;
+	int secondoffset = 10;
+        long mask = (1 << secondoffset) - 1; 
+     	pde_t virtualAddr = (pte_t) va,
+        firstbits = virtualAddr >> (secondoffset + offset) & mask,
+        secondbits = (virtualAddr >> offset) & mask;
+	if(!pgdir[firstbits]){
+		pte_t *new = (pte_t *) calloc( PGSIZE / sizeof(pte_t), sizeof(pte_t));
+	return -1;
 
-    /*HINT: Similar to Translate(), find the page directory (1st level)
-    and page table (2nd-level) indices. If no mapping exists, set the
-    virtual to physical mapping */
+/*
+	if (Translate(pgdir,va) == NULL){
+		int offset = 22;
+		void *x = pagedir[offset >> va];//sets x to appropriate page table
+		if(x==NULL){//creates pagetable
+		pte_t *pagetable = malloc(sizeof(pte_t) * 1024);
+		bzero(pagetable,1024*sizeof(pte_t));
+		pagedir[offset>>va]=&pagetable;
+		}
+		x[(12>>va)&0x3FF]=&pa;//sets physical addr value to location in page table
+   // HINT: Similar to Translate(), find the page directory (1st level)
+   // and page table (2nd-level) indices. If no mapping exists, set the
+   // virtual to physical mapping 
 
     return -1;
+*/
 }
 
 
-/*Function that gets the next available page
+/*
+void *next_physical(){
+	int temp, i = 0;
+	for(i = 0; i < PAGENUM; i += PGSIZE){
+		temp = physicalmap[i];
+		if(getbitmap(physicalmap, i) == 0){
+			return (void*) &physicalmem + i * PGSIZE;
+		}
+	}
+}
 */
+
 void *get_next_avail(int num_pages) {
- 
-    //Use virtual address bitmap to find the next free page
-   /*Enact in loop
-    * 1. Traverse virtual bitmap
-    * 2. Locate null/free position 
-    * 3. link virtual to physical
-    
-    */
-	int temp,i,j; //i is for iterating through the amount of pages and j is for allocating the number of pages
-	int group=((num_pages+1)<<1)-1;
-	for(i=0;i<MEMSIZE/PGSIZE;i++){//bit by bit of vmap
-		temp=virtualmap[i/8];//set to current section of bitmap
-		if(!(temp&group)){//see if pages are free
-		temp=4<<temp;//set temp to vaddr
+	int temp, i, j = 0;
+	for (i = 0; i < PAGENUM; i++){
+		char* location = physicalmap[i];
+		for (j = 0; j < 8; j++){
+			if (!((*location >> j) & 1)){
+				int x = i * 8 + j;
+			}
+		}
+	}
+}
+/*	int group = ((num_pages + 1)<< 1) - 1;
+	for (i = 0; i < PAGE_NUM; i++){
+		temp = virtualmap[i / 8];
+		if(!(temp&group)){
+		temp=4<<temp;
 			for(j=num_pages;j<num_pages;j++){
-				if(PageMap(pagedir,virtualmap,physicalmap)==-1){
+				if(PageMap(pagedir ,virtualmap ,next_physical)==-1){
 				return NULL;	
 				}
 			}
-		return (void*)temp;
-		}
-	} 
-}
-void *next_physical(){
-	int temp,i;
-	for(i=0;i<MEMSIZE/PGSIZE;i+=PGSIZE){
-		temp=physicalmap[i];
-                if(getbitmap(physicalmap,i)==0){//freeblock
-		//return addr of physical
-		return (void*) &physicalmem+i*PGSIZE;
-		}
-	}
-	return 0;
+		return (void*)temp; 
+*/
+	 
 }
 
-/* Function responsible for allocating pages
-and used by the benchmark
-*/
 void *m_alloc(unsigned int num_bytes) {
-    // If the physical memory is not yet initialized, then allocate and initialize.
-	if(flag==0){
-	//set physical space
-	SetPhysicalMem();
-	flag=1;
+	/* Checks to see if physical memory has already been set */
+	if (flag == 0){
+		SetPhysicalMem();
+		flag = 1;
 	}
-    //checks how many pages are needed (bytes/pgsize+1
+
+	/* Make sure that you are trying to malloc a legal number of bytes */
+	if (num_bytes < 1){
+		printf("%s\n", "Number of bytes must be 1 or greater");
+		return;
+	}
 	int pages;
+	/* Checks how many pages it will take for this malloc call */
 	if(num_bytes%(PGSIZE/8)!=0){
 	pages=num_bytes/(PGSIZE/8);
 	}
 	else{
 	pages=(num_bytes/(PGSIZE/8))+1;
 	}
-	return getnextavail(pages);
-	
+		
+//	return get_next_avail(pages);
+
    /* HINT: If the page directory is not initialized, then initialize the
    page directory. Next, using get_next_avail(), check if there are free pages. If
    free pages are available, set the bitmaps and map a new page. Note, you will 
@@ -146,11 +161,10 @@ void *m_alloc(unsigned int num_bytes) {
 /* Responsible for releasing one or more memory pages using virtual address (va)
 */
 void a_free(void *va, int size) {
-	
+
     //Free the page table entries starting from this virtual address (va)
     // Also mark the pages free in the bitmap
     //Only free if the memory from "va" to va+size is valid
-
 }
 
 
@@ -163,31 +177,7 @@ void PutVal(void *va, void *val, int size) {
        the contents of "val" to a physical page. NOTE: The "size" value can be larger
        than one page. Therefore, you may have to find multiple pages using Translate()
        function.*/
-	int pages,i,f;
-	if(size%PGSIZE==0){
-	pages=size/PGSIZE;
-	f=1;
-	}//divides evenly
-	else{
-	pages=(size/PGSIZE)+1;i
-	}
-	void* phys;
-	//copy over byte by byte for each page
-	for(i=0;i<pages;i++){
-	phys=Translate(pagedir,va+PGSIZE);//set to physical mem addr
-		if(f==1){
-		memcpy(phys+(i*PGSIZE), val+(i*PGSIZE), PGSIZE);
-		}
-		else{
-			if(size>PGSIZE){
-			memcpy(phys+(i*PGSIZE), val+(i*PGSIZE), PGSIZE);
-			size-=PGSIZE;
-			}
-			else{
-			memcpy(phys+(i*PGSIZE), val+(i*PGSIZE), size);
-			}
-		}
-	}
+
 }
 
 
@@ -210,12 +200,22 @@ argument representing the number of rows and columns. After performing matrix
 multiplication, copy the result to answer.
 */
 void MatMult(void *mat1, void *mat2, int size, void *answer) {
-
+	int i = 0;
+	for (i = 0; i < size; i++){
+		int j, k = 0;
+		for(j = 0; j < size; j++){
+			int *answer2 = (int *) translate(pagedir, ((int *) answer) + i * size + j);
+			*answer2 = 0;
+			for (k = 0; k < size; k++){
+				int *matrix1 = (int *) translate(pagedir, ((int *) mat1) + i * size + k);
+				int *matrix2 = (int *) translate(pagedir, ((int *) mat2) + k * size + j);
+				*answer2 += *matrix1 * *matrix2;
+			}
+		}
+	} 
     /* Hint: You will index as [i * size + j] where  "i, j" are the indices of the
     matrix accessed. Similar to the code in test.c, you will use GetVal() to
     load each element and perform multiplication. Take a look at test.c! In addition to 
     getting the values from two matrices, you will perform multiplication and 
     store the result to the "answer array"*/
-
-       
 }

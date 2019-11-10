@@ -1,44 +1,53 @@
 #ifndef MY_VM_H_INCLUDED
 #define MY_VM_H_INCLUDED
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <math.h>
+
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
 
 //Add any important includes here which you may need
 
-// Size of page
 #define PGSIZE 4096
-// Maximum size of your virtual memory
-#define MAX_MEMSIZE 4ULL*1024*1024*1024
-//Size of Physical Memory
-#define MEMSIZE 1024*1024*1024
-//Mask for Directory
-#define DIRMASK 0xFF100000
-//Mask for Table
-#define TABLEMASK 0x00EFF000
+#define MAX_MEMSIZE 4ULL * 1024 * 1024 * 1024
+#define MEMSIZE 1024 * 1024 * 1024
+#define TLB_SIZE 64
+#define PAGENUM MEMSIZE / PGSIZE
+#define BITMAPSIZE PAGENUM / 8 
+
 // Represents a page table entry
 typedef unsigned long pte_t;
 
 // Represents a page directory entry
 typedef unsigned long pde_t;
 
-//#define TLB_SIZE 
-
 //Structure to represents TLB
-struct tlb {
+typedef struct tlb {
+	void *pa;
+	pte_t pagestart;
+	bool valid;
+}tlb;
+typedef struct data_t{
+	char* physicalmap;
+	char* virtualmap;
+	char* physicalmemory;
+	pde_t *pagedir;
+	tlb *tlbchart;
+}data_t;
 
     //Assume your TLB is a direct mapped TLB of TBL_SIZE (entries)
     // You must also define wth TBL_SIZE in this file.
     //Assume each bucket to be 4 bytes
-};
+
 struct tlb tlb_store;
 
 
 void SetPhysicalMem();
-void* Translate(pde_t *pgdir, void *va);
+pte_t* Translate(pde_t *pgdir, void *va);
 int PageMap(pde_t *pgdir, void *va, void* pa);
 bool check_in_tlb(void *va);
 void put_in_tlb(void *va, void *pa);

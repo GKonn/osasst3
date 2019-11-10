@@ -6,7 +6,6 @@
 #define SIZE 5
 
 int main() {
-
     printf("Allocating three arrays of 400 bytes\n");
     void *a = m_alloc(100*4);
     int old_a = (int)a;
