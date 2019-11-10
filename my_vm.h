@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <math.h>
+#include "scv.h"
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
