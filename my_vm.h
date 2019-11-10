@@ -16,7 +16,7 @@
 #define MAX_MEMSIZE 4ULL * 1024 * 1024 * 1024
 #define MEMSIZE 1024 * 1024 * 1024
 #define TLB_SIZE 64
-#define PAGENUM MEMSIZE / PGSIZE
+#define PAGENUM (MEMSIZE / PGSIZE)
 #define BITMAPSIZE PAGENUM / 8 
 
 // Represents a page table entry
@@ -24,7 +24,8 @@ typedef unsigned long pte_t;
 
 // Represents a page directory entry
 typedef unsigned long pde_t;
-
+// Represents a bitmap
+typedef char* bitmap_t;
 //Structure to represents TLB
 typedef struct tlb {
 	void *pa;

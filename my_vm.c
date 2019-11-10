@@ -4,11 +4,12 @@
 int flag = 0;
 pde_t *pagedir;
 char* physicalmap;
-
+char* virtualmap;
+char* physicalmem;
 void SetPhysicalMem() {	
-	char *physicalmem = malloc(MEMSIZE);
+	physicalmem = malloc(MEMSIZE);
 	physicalmap = malloc(PAGENUM);
-	char *virtualmap = malloc(PAGENUM);
+	virtualmap = malloc(PAGENUM);
 	//Zero out the bitmaps
 	bzero(physicalmap, BITMAPSIZE);
 	bzero(virtualmap, BITMAPSIZE);
@@ -17,7 +18,12 @@ void SetPhysicalMem() {
 	bzero(pagedir, 1024 * sizeof(pde_t));	
 	
 }
-
+int get_bitmap(bitmap_t map, int i){
+return map[i/8]&(1<<(i/8));
+}
+void set_bitmap(bitmap_t map, int i, int bit){
+map[i/8]|=bit<<(i%8);
+}
 /*
 The function takes a virtual address and page directories starting address and
 performs translation to return the physical address
@@ -60,6 +66,9 @@ directory to see if there is an existing mapping for a virtual address. If the
 virtual address is not present, then a new entry will be added
 */
 int PageMap(pde_t *pgdir, void *va, void *pa) {//note: needs to allocate page tables as necessary
+	if(translate(pgdir,va)!=NULL){
+	return -1;
+	}
 	int offset  = 12;
 	int secondoffset = 10;
         long mask = (1 << secondoffset) - 1; 
@@ -69,7 +78,7 @@ int PageMap(pde_t *pgdir, void *va, void *pa) {//note: needs to allocate page ta
 	if(!pgdir[firstbits]){
 		pte_t *new = (pte_t *) calloc( PGSIZE / sizeof(pte_t), sizeof(pte_t));
 	return -1;
-
+	}
 /*
 	if (Translate(pgdir,va) == NULL){
 		int offset = 22;
@@ -89,42 +98,40 @@ int PageMap(pde_t *pgdir, void *va, void *pa) {//note: needs to allocate page ta
 }
 
 
-/*
+
 void *next_physical(){
 	int temp, i = 0;
 	for(i = 0; i < PAGENUM; i += PGSIZE){
 		temp = physicalmap[i];
-		if(getbitmap(physicalmap, i) == 0){
+		if(get_bitmap(physicalmap, i) == 0){
 			return (void*) &physicalmem + i * PGSIZE;
 		}
 	}
 }
-*/
+int checkrest(int i,int pages){
+int counter;
+	for(counter=i+1;counter<i+pages;counter++){
+		if(get_bitmap(physicalmap,counter)!=0){
+		return -1;
+		}
+	}
+	return 0;
+}
 
 void *get_next_avail(int num_pages) {
 	int temp, i, j = 0;
+	//int group = ((1<< num_pages+1)-1);
 	for (i = 0; i < PAGENUM; i++){
-		char* location = physicalmap[i];
-		for (j = 0; j < 8; j++){
-			if (!((*location >> j) & 1)){
-				int x = i * 8 + j;
-			}
-		}
-	}
-}
-/*	int group = ((num_pages + 1)<< 1) - 1;
-	for (i = 0; i < PAGE_NUM; i++){
-		temp = virtualmap[i / 8];
-		if(!(temp&group)){
-		temp=4<<temp;
+		if(get_bitmap(physicalmap,i)==0&&checkrest(i,num_pages)==0){//current bit is set
 			for(j=num_pages;j<num_pages;j++){
-				if(PageMap(pagedir ,virtualmap ,next_physical)==-1){
-				return NULL;	
+				if(PageMap(pagedir ,(void*)(i+j<<12),next_physical)==-1){
+				return (void*)(i<<12);	
 				}
 			}
 		return (void*)temp; 
-*/
-	 
+	 	}
+	}
+
 }
 
 void *m_alloc(unsigned int num_bytes) {
@@ -141,21 +148,14 @@ void *m_alloc(unsigned int num_bytes) {
 	}
 	int pages;
 	/* Checks how many pages it will take for this malloc call */
-	if(num_bytes%(PGSIZE/8)!=0){
-	pages=num_bytes/(PGSIZE/8);
+	if(num_bytes%(PGSIZE)==0){
+	pages=num_bytes/(PGSIZE);
 	}
 	else{
-	pages=(num_bytes/(PGSIZE/8))+1;
+	pages=(num_bytes/PGSIZE)+1;
 	}
 		
-//	return get_next_avail(pages);
-
-   /* HINT: If the page directory is not initialized, then initialize the
-   page directory. Next, using get_next_avail(), check if there are free pages. If
-   free pages are available, set the bitmaps and map a new page. Note, you will 
-   have to mark which physical pages are used. */
-
-    return NULL;
+	return get_next_avail(pages);
 }
 
 /* Responsible for releasing one or more memory pages using virtual address (va)
@@ -172,7 +172,7 @@ void a_free(void *va, int size) {
  * memory pages using virtual address (va)
 */
 void PutVal(void *va, void *val, int size) {
-
+	
     /* HINT: Using the virtual address and Translate(), find the physical page. Copy
        the contents of "val" to a physical page. NOTE: The "size" value can be larger
        than one page. Therefore, you may have to find multiple pages using Translate()
